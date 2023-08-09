@@ -1,5 +1,6 @@
 const db = require("../models");
 const employee = db.Employee;
+const token_ = db.Token
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { Op } = require("sequelize");
@@ -14,8 +15,12 @@ module.exports = {
       const isAccountExist = await employee.findOne({
         where: { id: req.user.id },
       });
+      const isEmailExist = await employee.findOne({
+        where: { email },
+      });
       if (!isAccountExist.isAdmin)
         throw { message: "Only admin can add new cashier" };
+      if (isEmailExist) throw { message: "Email has been used" };
       const result = await employee.create({
         email,
       });
@@ -47,6 +52,11 @@ module.exports = {
   register: async (req, res) => {
     try {
       const { fullName, password, phoneNumber, address, birthDate } = req.body;
+      console.log(req.token);
+      const isTokenExist = await token_.findOne({
+        where :{token:req.token},
+      })
+      if (isTokenExist) throw {message:"Link is expired"}
       const isAccountExist = await employee.findOne({
         where: { id: req.user.id },
       });
@@ -62,6 +72,9 @@ module.exports = {
         },
         { where: { id: isAccountExist.id } }
       );
+      await token_.create({
+        token: req.token
+      })
       res.status(200).send({
         status: true,
         message: "Register success",
